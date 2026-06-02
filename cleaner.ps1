@@ -82,12 +82,18 @@ foreach ($profile in $firefoxProfiles) {
 Write-Host "`n--- Windows Update Cache ---" -ForegroundColor Yellow
 Remove-FolderContents "C:\Windows\SoftwareDistribution\Download" "Windows Update Downloads"
 
-# 4. Event Logs (optional, keep last 30 days)
+# 4. Event Logs (skip protected/system logs)
 Write-Host "`n--- Event Logs ---" -ForegroundColor Yellow
-$beforeCount = (Get-WinEvent -ListLog * -ErrorAction SilentlyContinue | 
-                Where-Object { $_.RecordCount -gt 0 } | Measure-Object).Count
-wevtutil el | ForEach-Object { wevtutil cl "$_.log" } 2>$null | Out-Null
-Write-Status "Cleared $beforeCount event logs" "Clean"
+$logs = Get-WinEvent -ListLog * -ErrorAction SilentlyContinue | 
+        Where-Object { $_.RecordCount -gt 0 -and -not $_.IsEnabled }
+$cleared = 0
+foreach ($log in $logs) {
+    try {
+        wevtutil cl $log.LogName 2>$null | Out-Null
+        $cleared++
+    } catch { }
+}
+Write-Status "Cleared $cleared event logs" "Clean"
 
 # 5. Recycle Bin
 Write-Host "`n--- Recycle Bin ---" -ForegroundColor Yellow
