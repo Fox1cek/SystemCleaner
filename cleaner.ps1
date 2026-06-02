@@ -97,16 +97,19 @@ Write-Status "Cleared $cleared event logs" "Clean"
 
 # 5. Recycle Bin
 Write-Host "`n--- Recycle Bin ---" -ForegroundColor Yellow
-$recycleBin = (New-Object -ComObject Shell.Application).Namespace(0xA)
-$items = $recycleBin.Items()
-$count = $items.Count
-if ($count -gt 0) {
-    $shell = New-Object -ComObject Shell.Application
-    $shell.Namespace(0).ParseName("Recycle Bin").InvokeVerb("Empty Recycle Bin")
-    Write-Status "Emptied Recycle Bin ($count items)" "Clean"
-    $itemsCleaned++
-} else {
-    Write-Status "Recycle Bin already empty" "Info"
+try {
+    $recycleBin = (New-Object -ComObject Shell.Application).Namespace(0xA)
+    $items = $recycleBin.Items()
+    if ($items -and $items.Count -gt 0) {
+        $count = $items.Count
+        Clear-RecycleBin -Force -ErrorAction SilentlyContinue
+        Write-Status "Emptied Recycle Bin ($count items)" "Clean"
+        $itemsCleaned++
+    } else {
+        Write-Status "Recycle Bin already empty" "Info"
+    }
+} catch {
+    Write-Status "Could not empty Recycle Bin" "Warning"
 }
 
 # 6. Prefetch (old only)
